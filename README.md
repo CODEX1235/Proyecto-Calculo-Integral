@@ -8,7 +8,7 @@ El usuario escribe una función como x**2 + 1, selecciona la operación deseada 
 🛠️ Tecnologías utilizadas
 Tecnología Rol :  Instalación PythonLenguaje principalpython.orgSymPyMotor.
 
-matemático : (integrales, Taylor, atan, derivadas) ´pip install´ sympyTkinter.
+matemático : (integrales, Taylor, atan, derivadas) ´pip install sympyTkinter´.
 
 Interfaz gráfica : (ventanas, botones, inputs) Incluido con PythonMatplotlibGráficas de funciones (opcional) 
 ´pip install matplotlib´.
