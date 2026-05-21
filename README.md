@@ -6,7 +6,7 @@ Este proyecto es una calculadora matemática avanzada que combina una interfaz g
 El usuario escribe una función como x**2 + 1, selecciona la operación deseada y el sistema procesa y muestra el resultado, ya sea como expresión matemática o como gráfica.
 
 🛠️ Tecnologías utilizadas
-Tecnología Rol :  Instalación PythonLenguaje principalpython.orgSymPyMotor
+Tecnología Rol :  Instalación PythonLenguaje principalpython.orgSymPyMotor /n
 matemático : (integrales, Taylor, atan, derivadas) ´pip install´ sympyTkinterInterfaz gráfica (ventanas, botones, inputs) Incluido con PythonMatplotlibGráficas de funciones (opcional) 
 pip install matplotlib
 
