@@ -1,3 +1,9 @@
+
+
+
+
+
+
 🧮 Calculadora Matemática
 Una herramienta de cálculo simbólico con interfaz gráfica desarrollada en Python. Permite al usuario ingresar funciones matemáticas y aplicarles operaciones como arcotangente, integrales y series de Taylor, con resultados visuales claros y opcionalmente gráficas.
 
@@ -30,10 +36,12 @@ CalculadoraMatematica/
 
 ⚙️ Instalación
 
+IMPORTANTE : 
+ESTE PROYECTO UNICAMENTE SE ABRIRÁ EN TU DISPOSITIVO LOCAL, POR FAVOR DESCARGAR LOS ARCHIVOS Y SEGUIR LAS INSTRUCCIONES:
+
 Clona el repositorio:
 
-bash   git clone https://github.com/tu-usuario/calculadora-matematica.git
-   cd calculadora-matematica
+bash   git clone https://github.com/CODEX1235/Proyecto-Calculo-Integral.git
 
 Instala las dependencias:
 
@@ -42,6 +50,21 @@ bash   pip install -r requirements.txt
 Ejecuta la aplicación:
 
 bash   python main.py
+
+Descargar archivo: 
+
+Descarga el archivo desde el repositorio en github https://github.com/CODEX1235/Proyecto-Calculo-Integral.git
+
+Add file y Upload File 
+
+Descomprimes el archivo .ZIP y ejecutalo en VS Code 
+
+bash   pip install -r requirements.txt
+
+Ejecuta la aplicación:
+
+bash   python main.py
+
 
 🚀 Funcionalidades
 
