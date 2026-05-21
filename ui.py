@@ -1,11 +1,10 @@
-
 import tkinter as tk
 from tkinter import ttk, messagebox
 import threading
  
 from atan import calcular_atan
 from integrales import calcular_integral_indefinida, calcular_integral_definida
-from taylor import calcular_serie_taylor
+from taylor import calcular_serie_taylor, calcular_taylor_integral
  
 # Intentar importar matplotlib (opcional)
 try:
@@ -41,6 +40,7 @@ BOTONES_MATEMATICOS = [
     ("atan(", "atan("),("exp(", "exp("),  ("log(", "log("),
     ("sqrt(", "sqrt("),("pi", "pi"),      ("x²", "x**2"),
     ("x³", "x**3"),   ("**", "**"),       ("( )", "()"),
+    ("ⁿ√x", "root(,)"),
 ]
  
  
@@ -139,6 +139,7 @@ class CalculadoraApp:
             ("indefinida", "Integral indefinida  ∫f(x)dx"),
             ("definida", "Integral definida  ∫ₐᵇ f(x)dx"),
             ("taylor", "Serie de Taylor"),
+            ("taylor_integral", "Taylor + Integral  ∫T(x)dx"),
         ]
         for valor, texto in ops:
             rb = tk.Radiobutton(card, text=texto, variable=self.operacion,
@@ -182,6 +183,24 @@ class CalculadoraApp:
  
         elif op == "taylor":
             tk.Label(self.frame_extra, text="Parámetros de Taylor",
+                     font=("Segoe UI", 10, "bold"),
+                     bg=COLOR_CARD, fg=COLOR_TEXT).grid(row=0, column=0, columnspan=4, sticky="w", pady=(0, 6))
+            tk.Label(self.frame_extra, text="Punto a:", font=FONT_LABEL,
+                     bg=COLOR_CARD, fg=COLOR_MUTED).grid(row=1, column=0, sticky="w", padx=(0, 4))
+            self.taylor_punto = tk.Entry(self.frame_extra, width=8, font=FONT_MONO,
+                                         relief="flat", bg="#F1EFE8",
+                                         highlightthickness=1, highlightbackground=COLOR_BORDER)
+            self.taylor_punto.insert(0, "0")
+            self.taylor_punto.grid(row=1, column=1, padx=(0, 12))
+            tk.Label(self.frame_extra, text="Orden:", font=FONT_LABEL,
+                     bg=COLOR_CARD, fg=COLOR_MUTED).grid(row=1, column=2, sticky="w", padx=(0, 4))
+            self.taylor_orden = tk.Entry(self.frame_extra, width=6, font=FONT_MONO,
+                                          relief="flat", bg="#F1EFE8",
+                                          highlightthickness=1, highlightbackground=COLOR_BORDER)
+            self.taylor_orden.insert(0, "6")
+            self.taylor_orden.grid(row=1, column=3)
+        elif op == "taylor_integral":
+            tk.Label(self.frame_extra, text="Parámetros de Taylor + Integral",
                      font=("Segoe UI", 10, "bold"),
                      bg=COLOR_CARD, fg=COLOR_TEXT).grid(row=0, column=0, columnspan=4, sticky="w", pady=(0, 6))
             tk.Label(self.frame_extra, text="Punto a:", font=FONT_LABEL,
@@ -293,6 +312,13 @@ class CalculadoraApp:
                     resultado = calcular_serie_taylor(expresion, punto, orden)
                 except ValueError:
                     resultado = {"exito": False, "error": "El punto y el orden deben ser números."}
+            elif op == "taylor_integral":
+                try:
+                    punto = float(self.taylor_punto.get().strip())
+                    orden = int(self.taylor_orden.get().strip())
+                    resultado = calcular_taylor_integral(expresion, punto, orden)
+                except ValueError:
+                    resultado = {"exito": False, "error": "El punto y el orden deben ser números."}
  
             self.root.after(0, lambda: self._mostrar_resultado(resultado))
  
@@ -324,6 +350,11 @@ class CalculadoraApp:
                 if resultado.get("terminos"):
                     lineas.append("")
                     lineas.append("Términos: " + "  +  ".join(resultado["terminos"][:6]))
+            elif op == "taylor_integral":
+                lineas.append(f"Taylor orden {resultado['orden']} en a={resultado['punto']}:")
+                lineas.append(f"  T(x) = {resultado['taylor_texto']}")
+                lineas.append("")
+                lineas.append(f"∫T(x)dx = {resultado['integral_texto']}")
  
             texto = "\n".join(lineas)
             self.texto_resultado.insert("1.0", texto)
@@ -372,6 +403,10 @@ class CalculadoraApp:
         if texto == "()":
             self.entrada_fx.insert(pos, "()")
             self.entrada_fx.icursor(int(pos) + 1)
+        elif texto == "root(,)":
+            self.entrada_fx.insert(pos, "root(, )")
+            # Posicionar cursor después de root( para escribir la expresión
+            self.entrada_fx.icursor(int(pos) + 5)
         else:
             self.entrada_fx.insert(pos, texto)
         self.entrada_fx.focus()
