@@ -39,7 +39,7 @@ CalculadoraMatematica/
 IMPORTANTE : 
 ESTE PROYECTO UNICAMENTE SE ABRIRÁ EN TU DISPOSITIVO LOCAL, POR FAVOR DESCARGAR LOS ARCHIVOS Y SEGUIR LAS INSTRUCCIONES:
 
-Clona el repositorio:
+Opcion 1: Clona el repositorio:
 
 bash   git clone https://github.com/CODEX1235/Proyecto-Calculo-Integral.git
 
@@ -51,11 +51,13 @@ Ejecuta la aplicación:
 
 bash   python main.py
 
-Descargar archivo: 
+Opcion 2:  Descargar archivo: 
 
 Descarga el archivo desde el repositorio en github https://github.com/CODEX1235/Proyecto-Calculo-Integral.git
 
-Add file y Upload File 
+<code> 
+
+Local y Download ZIP
 
 Descomprimes el archivo .ZIP y ejecutalo en VS Code 
 
