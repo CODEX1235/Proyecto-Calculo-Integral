@@ -140,3 +140,4 @@ def validar_parametros_taylor(punto_str: str, orden_str: str) -> dict | None:
  
     return None  # sin error
  
+ 
