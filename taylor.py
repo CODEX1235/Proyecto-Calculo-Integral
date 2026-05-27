@@ -1,11 +1,17 @@
-
-from sympy import symbols, sympify, series, latex, simplify, SympifyError, factorial, O
+from sympy import (symbols, sympify, series, latex, simplify, expand,
+                   integrate, pretty, SympifyError, factorial, O)
 from errores import validar_expresion, validar_parametros_taylor, manejar_error
  
 x = symbols('x')
  
  
+# ─── Serie de Taylor (punto arbitrario) ──────────────────────────────────────
+ 
 def calcular_serie_taylor(expresion_str: str, punto: float = 0, orden: int = 6) -> dict:
+    """
+    Calcula la serie de Taylor de f(x) alrededor del punto 'a' hasta el orden dado.
+    Si punto == 0 es equivalente a Maclaurin.
+    """
     error = validar_expresion(expresion_str)
     if error:
         return error
@@ -17,21 +23,19 @@ def calcular_serie_taylor(expresion_str: str, punto: float = 0, orden: int = 6) 
         f = sympify(expresion_str)
         a = sympify(str(punto))
  
-        serie = series(f, x, a, orden)
+        # n+1 para que el grado máximo sea exactamente 'orden'
+        serie = series(f, x, a, orden + 1)
  
-        # Quitar el término O(x^n) para mostrar solo los términos finitos
-        serie_sin_o = serie.removeO()
-        serie_sin_o = simplify(serie_sin_o)
+        serie_sin_o = expand(serie.removeO())
  
-        # Construir representación de los términos individuales
-        terminos = _extraer_terminos(serie, orden)
+        terminos = _extraer_terminos_ordenados(serie_sin_o)
  
         return {
             "exito": True,
             "resultado": serie_sin_o,
-            "serie_completa": serie,
             "latex": latex(serie_sin_o),
             "texto": str(serie_sin_o),
+            "pretty": pretty(serie_sin_o, use_unicode=True),
             "terminos": terminos,
             "punto": str(a),
             "orden": orden,
@@ -44,92 +48,39 @@ def calcular_serie_taylor(expresion_str: str, punto: float = 0, orden: int = 6) 
         return manejar_error("error_inesperado", detalle=str(e))
  
  
-def _extraer_terminos(serie, orden: int) -> list:
+# ─── Serie de Maclaurin (punto fijo = 0) ─────────────────────────────────────
+ 
+def calcular_serie_maclaurin(expresion_str: str, orden: int = 6) -> dict:
     """
-    Extrae los términos individuales de la serie como lista de strings.
+    Calcula la serie de Maclaurin de f(x) — es decir Taylor con a=0 —
+    y muestra también la fórmula general de cada término: f^(n)(0)/n! · x^n
     """
-    try:
-        serie_sin_o = serie.removeO()
-        terminos_expr = serie_sin_o.as_ordered_terms()
-        return [str(t) for t in terminos_expr]
-    except Exception:
-        return [str(serie.removeO())]
- 
- 
-def calcular_taylor_evaluado(expresion_str: str, valor_x: float, punto: float = 0, orden: int = 6) -> dict:
-    """
-    Evalúa la aproximación de Taylor de f(x) en x = valor_x.
-    Útil para comparar con el valor real de la función.
-    """
-    try:
-        f = sympify(expresion_str)
-        a = sympify(str(punto))
- 
-        serie = series(f, x, a, orden).removeO()
- 
-        aprox = float(serie.subs(x, valor_x))
-        real = float(f.subs(x, valor_x))
-        error = abs(real - aprox)
- 
-        return {
-            "exito": True,
-            "valor_x": valor_x,
-            "aproximacion": round(aprox, 6),
-            "valor_real": round(real, 6),
-            "error_absoluto": round(error, 8),
-            "orden": orden,
-        }
- 
-    except SympifyError:
-        return {
-            "exito": False,
-            "error": f"No se pudo interpretar la expresión: '{expresion_str}'",
-        }
-    except Exception as e:
-        return {
-            "exito": False,
-            "error": f"Error al evaluar Taylor: {str(e)}",
-        }
- 
-def calcular_taylor_integral(expresion_str: str, punto: float = 0, orden: int = 6) -> dict:
-    """
-    Calcula la serie de Taylor de f(x) y luego integra el polinomio resultante.
- 
-    Pasos:
-        1. Genera T(x) = serie de Taylor de f(x) alrededor de 'punto' hasta 'orden'
-        2. Calcula ∫T(x)dx de forma indefinida
-    """
-    from sympy import integrate, latex
-    from errores import validar_expresion, validar_parametros_taylor, manejar_error
- 
     error = validar_expresion(expresion_str)
     if error:
         return error
-    error = validar_parametros_taylor(str(punto), str(orden))
+    error = validar_parametros_taylor("0", str(orden))
     if error:
         return error
  
     try:
         f = sympify(expresion_str)
-        a = sympify(str(punto))
  
-        # Paso 1: Serie de Taylor
-        taylor = series(f, x, a, orden).removeO()
-        taylor = simplify(taylor)
+        serie = series(f, x, 0, orden + 1)
+        serie_sin_o = expand(serie.removeO())
  
-        # Paso 2: Integral indefinida del polinomio de Taylor
-        integral = integrate(taylor, x)
-        integral = simplify(integral)
+        terminos = _extraer_terminos_ordenados(serie_sin_o)
+ 
+        # Línea compacta: suma con notación de coeficientes
+        texto_serie = str(serie_sin_o)
+        pretty_serie = pretty(serie_sin_o, use_unicode=True)
  
         return {
             "exito": True,
-            "taylor": taylor,
-            "taylor_texto": str(taylor),
-            "taylor_latex": latex(taylor),
-            "integral": integral,
-            "integral_texto": str(integral) + " + C",
-            "integral_latex": latex(integral) + " + C",
-            "punto": str(a),
+            "resultado": serie_sin_o,
+            "latex": latex(serie_sin_o),
+            "texto": texto_serie,
+            "pretty": pretty_serie,
+            "terminos": terminos,
             "orden": orden,
             "funcion_original": str(f),
         }
@@ -138,3 +89,21 @@ def calcular_taylor_integral(expresion_str: str, punto: float = 0, orden: int = 
         return manejar_error("expresion_invalida", expr=expresion_str)
     except Exception as e:
         return manejar_error("error_inesperado", detalle=str(e))
+ 
+ 
+# ─── Helpers ──────────────────────────────────────────────────────────────────
+ 
+def _extraer_terminos_ordenados(expr) -> list:
+    """Devuelve lista de strings de los términos ordenados por potencia de x."""
+    try:
+        terminos = expr.as_ordered_terms()
+        # Ordenar de menor a mayor potencia
+        def _grado(t):
+            try:
+                return t.as_poly(x).degree() if t.as_poly(x) else 0
+            except Exception:
+                return 0
+        terminos_ord = sorted(terminos, key=_grado)
+        return [str(t) for t in terminos_ord]
+    except Exception:
+        return [str(expr)]
