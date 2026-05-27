@@ -45,6 +45,7 @@ BOTONES_MATEMATICOS = [
     ("sqrt(", "sqrt("), ("pi", "pi"),      ("x²", "x**2"),
     ("x³", "x**3"),     ("**", "**"),      ("( )", "()"),
     ("ⁿ√x", "root(,)"),
+    ("⌫ Borrar", "__BORRAR__"),
 ]
  
 # ─── Manual de uso por operación ─────────────────────────────────────────────
@@ -463,11 +464,11 @@ class CalculadoraApp:
  
             elif op == "taylor":
                 try:
-                    punto = float(self.taylor_punto.get().strip())
+                    punto = self.taylor_punto.get().strip()
                     orden = int(self.taylor_orden.get().strip())
                     res = calcular_serie_taylor(expresion, punto, orden)
                 except ValueError:
-                    res = {"exito": False, "error": "El punto y el orden deben ser números."}
+                    res = {"exito": False, "error": "El orden debe ser un número entero."}
  
             elif op == "maclaurin":
                 try:
@@ -570,7 +571,7 @@ class CalculadoraApp:
             "indefinida":    lambda: f"∫({expresion})dx = {resultado.get('texto','')}",
             "definida":      lambda: f"∫({expresion})dx ≈ {resultado.get('valor_numerico', resultado.get('texto',''))}",
             "taylor":        lambda: f"Taylor({expresion}, a={resultado.get('punto','')}, n={resultado.get('orden','')})",
-            "maclaurin":     lambda: f"Maclaurin({expresion}, n={resultado.get('orden','')})",
+            "maclaurin":     lambda: f"Maclaurin({expresion}, n={resultado.get('orden','')}) = {resultado.get('texto','')[:50]}",
         }
         entrada = {
             "etiqueta": etiquetas.get(op, op),
@@ -629,8 +630,9 @@ class CalculadoraApp:
                 orden = int(self.taylor_orden.get())
                 graf.graficar_taylor(expresion, self.ax, punto, orden)
             elif op == "maclaurin":
-                graf.graficar_taylor(expresion, self.ax, 0,
-                                     int(self.maclaurin_orden.get()))
+                orden_mac = int(self.maclaurin_orden.get())
+                graf.graficar_taylor(expresion, self.ax, 0, orden_mac,
+                                     etiqueta=f"Maclaurin orden {orden_mac}")
             else:
                 graf.graficar_funcion(expresion, self.ax)
             self.fig.tight_layout()
@@ -641,6 +643,12 @@ class CalculadoraApp:
     # ── Helpers ───────────────────────────────────────────────────────────────
  
     def _insertar(self, texto: str):
+        if texto == "__BORRAR__":
+            pos = self.entrada_fx.index(tk.INSERT)
+            if pos > 0:
+                self.entrada_fx.delete(pos - 1, pos)
+            self.entrada_fx.focus()
+            return
         pos = self.entrada_fx.index(tk.INSERT)
         if texto == "()":
             self.entrada_fx.insert(pos, "()")

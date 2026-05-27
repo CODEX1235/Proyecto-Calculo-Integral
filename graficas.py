@@ -79,7 +79,7 @@ def graficar_integral(expresion_str: str, ax, limite_inf: float, limite_sup: flo
         return False
  
  
-def graficar_taylor(expresion_str: str, ax, punto: float = 0, orden: int = 6, rango=(-5, 5)):
+def graficar_taylor(expresion_str: str, ax, punto: float = 0, orden: int = 6, rango=(-5, 5), etiqueta: str = None):
     """
     Grafica f(x) y su aproximación de Taylor superpuestas.
     """
@@ -102,7 +102,7 @@ def graficar_taylor(expresion_str: str, ax, punto: float = 0, orden: int = 6, ra
  
         ax.plot(xs, ys_f, color="#534AB7", linewidth=2, label=f"f(x) = {expresion_str}")
         ax.plot(xs, ys_t, color="#D85A30", linewidth=2, linestyle="--",
-                label=f"Taylor orden {orden} en x={punto}")
+                label=etiqueta if etiqueta else f"Taylor orden {orden} en x={punto}")
  
         ax.axhline(0, color="#888", linewidth=0.7, linestyle="--")
         ax.axvline(0, color="#888", linewidth=0.7, linestyle="--")

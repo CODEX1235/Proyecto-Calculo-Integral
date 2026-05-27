@@ -122,11 +122,13 @@ def validar_limites(limite_inf_str: str, limite_sup_str: str) -> dict | None:
 def validar_parametros_taylor(punto_str: str, orden_str: str) -> dict | None:
     """
     Valida el punto de expansión y el orden de la serie de Taylor.
+    Acepta números y expresiones simbólicas como pi, pi/4, sqrt(2), etc.
     Retorna None si son válidos, o un dict de error si no lo son.
     """
+    from sympy import sympify, SympifyError
     try:
-        float(punto_str)
-    except ValueError:
+        sympify(punto_str)
+    except (SympifyError, Exception):
         return manejar_error("punto_invalido", punto=punto_str)
  
     try:
@@ -139,5 +141,7 @@ def validar_parametros_taylor(punto_str: str, orden_str: str) -> dict | None:
         return manejar_error("orden_invalido")
  
     return None  # sin error
+ 
+ 
  
  
