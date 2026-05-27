@@ -152,7 +152,7 @@ class CalculadoraApp:
         self._seccion_entrada()
         self._seccion_botones_mat()
         self._seccion_operacion()
-        self._seccion_manual()       # ← manual de uso (dinámico)
+        self._seccion_manual()       
         self._seccion_opciones_extra()
         self._seccion_calcular()
         self._seccion_resultado()
@@ -225,7 +225,6 @@ class CalculadoraApp:
     # ── Sección: manual de uso ────────────────────────────────────────────────
  
     def _seccion_manual(self):
-        """Tarjeta amarilla con ayuda contextual para la operación seleccionada."""
         self.card_manual = tk.Frame(self.frame_body, bg=COLOR_HINT_BG,
                                     highlightthickness=1,
                                     highlightbackground=COLOR_HINT_BRD,
@@ -353,12 +352,12 @@ class CalculadoraApp:
                                       cursor="hand2", command=self._limpiar)
         self.btn_limpiar.pack(side="right", padx=(0, 8))
  
-    # ── Sección: resultado ────────────────────────────────────────────────────
+    # ── Sección: resultado (Renderizado con Matplotlib) ───────────────────────
  
     def _seccion_resultado(self):
-        card = self._card(self.frame_body)
+        self.card_resultado = self._card(self.frame_body)
  
-        enc = tk.Frame(card, bg=COLOR_CARD)
+        enc = tk.Frame(self.card_resultado, bg=COLOR_CARD)
         enc.pack(fill="x", pady=(0, 6))
         tk.Label(enc, text="Resultado", font=("Segoe UI", 10, "bold"),
                  bg=COLOR_CARD, fg=COLOR_TEXT).pack(side="left")
@@ -371,13 +370,16 @@ class CalculadoraApp:
                                      command=self._copiar_resultado)
         self.btn_copiar.pack(side="right")
  
-        self.texto_resultado = tk.Text(card, font=FONT_MONO, height=6,
-                                        relief="flat", bg="#F1EFE8",
-                                        fg=COLOR_TEXT, wrap="word",
-                                        state="disabled",
-                                        highlightthickness=1,
-                                        highlightbackground=COLOR_BORDER)
-        self.texto_resultado.pack(fill="x")
+        # Configurar un canvas gráfico dedicado a mostrar la fórmula LaTeX perfectamente estructurada
+        self.fig_res = Figure(figsize=(5.5, 1.4), dpi=95, facecolor="#F1EFE8")
+        self.ax_res  = self.fig_res.add_subplot(111)
+        self.ax_res.axis('off')  # Ocultar ejes coordenados
+        self.ax_res.set_position([0.02, 0.02, 0.96, 0.96])
+        
+        self.canvas_res = FigureCanvasTkAgg(self.fig_res, master=self.card_resultado)
+        self.widget_res = self.canvas_res.get_tk_widget()
+        self.widget_res.pack(fill="x")
+        self.widget_res.config(highlightthickness=1, highlightbackground=COLOR_BORDER)
  
     # ── Sección: historial ────────────────────────────────────────────────────
  
@@ -483,69 +485,78 @@ class CalculadoraApp:
  
     def _mostrar_resultado(self, resultado: dict, expresion: str, op: str):
         self.btn_calcular.config(state="normal", text="  Calcular  →")
-        self.texto_resultado.config(state="normal")
-        self.texto_resultado.delete("1.0", "end")
+        self.ax_res.clear()
+        self.ax_res.axis('off')
+        self.ax_res.set_position([0.02, 0.02, 0.96, 0.96])
  
         if not resultado:
             return
  
         if resultado.get("exito"):
-            lineas = []
- 
+            lineas_clipboard = []
+            
+            # Formatear la salida utilizando la sintaxis de mathtext de Matplotlib
             if op == "atan":
-                lineas.append(f"atan({expresion}) =")
-                lineas.append(resultado.get("pretty", resultado["texto"]))
- 
+                lineas_clipboard.append(f"atan({expresion}) =")
+                latex_str = f"$\\mathrm{{atan}}({expresion}) =$"
+                
             elif op == "resolver_atan":
                 valor_c = self.valor_atan.get().strip()
-                rhs = resultado.get("rhs", "")
-                lineas.append(f"atan({expresion}) = {valor_c}")
-                if rhs:
-                    lineas.append(f"  →  {expresion} = tan({valor_c}) = {rhs}")
-                lineas.append("")
-                if resultado["soluciones"]:
-                    lineas.append("x =  " + resultado.get("pretty", resultado["texto"]))
-                    lineas.append(f"x ≈  {resultado['decimal']}")
-                else:
-                    lineas.append("Sin solución real")
+                lineas_clipboard.append(f"atan({expresion}) = {valor_c}")
+                latex_str = f"$\\mathrm{{atan}}({expresion}) = {valor_c}$"
  
             elif op == "indefinida":
-                lineas.append(f"∫ {expresion} dx =")
-                lineas.append(resultado.get("pretty", resultado["texto"]))
+                lineas_clipboard.append(f"∫ {expresion} dx =")
+                latex_str = f"$\\int {expresion} \\, dx =$"
  
             elif op == "definida":
                 a = self.limite_inf.get().strip()
                 b = self.limite_sup.get().strip()
-                lineas.append(f"∫ {expresion} dx  de {a} a {b} =")
-                lineas.append(resultado.get("pretty", resultado["texto"]))
-                num = resultado.get("valor_numerico")
-                if num is not None:
-                    lineas.append(f"Valor numérico ≈  {num}")
+                lineas_clipboard.append(f"∫ {expresion} dx  de {a} a {b} =")
+                latex_str = f"$\\int_{{{a}}}^{{{b}}} {expresion} \\, dx =$"
  
             elif op == "taylor":
                 a = self.taylor_punto.get().strip()
                 n = self.taylor_orden.get().strip()
-                lineas.append(f"Taylor({expresion},  a={a},  orden={n}) =")
-                lineas.append(resultado.get("pretty", resultado["texto"]))
+                lineas_clipboard.append(f"Taylor({expresion}, a={a}, orden={n}) =")
+                latex_str = f"$\\mathrm{{Taylor}}({expresion}, a={a}, n={n}) =$"
  
             elif op == "maclaurin":
                 n = self.maclaurin_orden.get().strip()
-                lineas.append(f"Maclaurin({expresion},  orden={n}) =")
-                lineas.append(resultado.get("pretty", resultado["texto"]))
+                lineas_clipboard.append(f"Maclaurin({expresion}, orden={n}) =")
+                latex_str = f"$\\mathrm{{Maclaurin}}({expresion}, n={n}) =$"
  
-            texto = "\n".join(lineas)
-            self._ultimo_texto = texto
-            self.texto_resultado.insert("1.0", texto)
-            self.texto_resultado.config(fg=COLOR_SUCCESS)
+            # Añadir la respuesta en una sola línea quitando saltos de línea rotos
+            respuesta_limpia = resultado.get("texto", "").replace("\n", " ")
+            lineas_clipboard.append(respuesta_limpia)
+            
+            num = resultado.get("valor_numerico")
+            if num is not None:
+                lineas_clipboard.append(f"Valor numérico ≈ {num}")
+                # Si es una integral definida, creamos un despliegue elegante de dos renglones gráficos
+                texto_mostrar = f"{latex_str}\n$\\approx {num:.6f}$"
+            else:
+                texto_mostrar = f"{latex_str}\n${respuesta_limpia[:60]}...$" if len(respuesta_limpia) > 60 else f"{latex_str}\n${respuesta_limpia}$"
+ 
+            # Renderizar el texto matemático con tipografía serif profesional
+            self.ax_res.text(0.02, 0.5, texto_mostrar, 
+                             fontsize=11, family='serif', color=COLOR_SUCCESS,
+                             ha='left', va='center', wrap=True)
+ 
+            self._ultimo_texto = "\n".join(lineas_clipboard)
             self._agregar_historial(op, expresion, resultado)
- 
+            
+            # 🔥 AUTO-GRAFICAR: Si Matplotlib está activo, actualiza el lienzo inferior automáticamente
+            if MATPLOTLIB_DISPONIBLE:
+                self._graficar()
         else:
             texto_err = "⚠  " + resultado.get("error", "Error desconocido")
             self._ultimo_texto = texto_err
-            self.texto_resultado.insert("1.0", texto_err)
-            self.texto_resultado.config(fg=COLOR_ERROR)
+            self.ax_res.text(0.5, 0.5, texto_err, 
+                             fontsize=10, family='sans-serif', color=COLOR_ERROR,
+                             ha='center', va='center')
  
-        self.texto_resultado.config(state="disabled")
+        self.canvas_res.draw()
  
     # ── Copiar ────────────────────────────────────────────────────────────────
  
@@ -662,9 +673,9 @@ class CalculadoraApp:
  
     def _limpiar(self):
         self.entrada_fx.delete(0, "end")
-        self.texto_resultado.config(state="normal")
-        self.texto_resultado.delete("1.0", "end")
-        self.texto_resultado.config(state="disabled")
+        self.ax_res.clear()
+        self.ax_res.axis('off')
+        self.canvas_res.draw()
         self._ultimo_texto = ""
         if MATPLOTLIB_DISPONIBLE:
             self.ax.clear()
