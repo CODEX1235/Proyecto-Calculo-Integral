@@ -32,8 +32,8 @@ COLOR_HINT_BG  = "#FFFBEA"
 COLOR_HINT_BRD = "#E8D96A"
 COLOR_HIST_BG  = "#EDEAFF"
 COLOR_HIST_HDR = "#7B72D4"
-FONT_LABEL     = ("Segoe UI", 10)
-FONT_MONO      = ("Courier New", 11)
+FONT_LABEL     = ("Segoe UI", 20)
+FONT_MONO      = ("Courier New", 20)
 FONT_SMALL     = ("Segoe UI", 9)
  
 MAX_HISTORIAL  = 10
@@ -45,7 +45,7 @@ BOTONES_MATEMATICOS = [
     ("sqrt(", "sqrt("), ("pi", "pi"),      ("x²", "x**2"),
     ("x³", "x**3"),     ("**", "**"),      ("( )", "()"),
     ("ⁿ√x", "root(,)"),
-    ("⌫ Borrar", "__BORRAR__"),
+    
 ]
  
 # ─── Manual de uso por operación ─────────────────────────────────────────────
@@ -113,6 +113,52 @@ MANUAL = {
 }
  
  
+def py_a_latex(expr: str) -> str:
+    """Convierte expresión Python a LaTeX legible para matplotlib mathtext."""
+    import re
+    s = expr.strip()
+
+    # Fracciones: a/b  →  \frac{a}{b}  (solo si no hay espacios extra)
+    # Primero protegemos potencias con fracciones internas
+    s = re.sub(r'\bpi\b', r'\\pi', s)
+    s = re.sub(r'\boo\b',  r'\\infty', s)
+    s = re.sub(r'\bE\b',   r'e', s)
+
+    # Funciones conocidas — inverse trig must map to \arctan etc. for mathtext
+    for fn in ('sin', 'cos', 'tan', 'exp', 'log', 'sqrt'):
+        s = re.sub(rf'\b{fn}\b', rf'\\{fn}', s)
+    for py_fn, latex_fn in (('atan', 'arctan'), ('asin', 'arcsin'), ('acos', 'arccos')):
+        s = re.sub(rf'\b{py_fn}\b', rf'\\{latex_fn}', s)
+    # sqrt(x) → \sqrt{x}
+    s = re.sub(r'\\sqrt\(([^)]+)\)', r'\\sqrt{\1}', s)
+
+    # Potencias: x**n → x^{n}
+    def repl_pow(m):
+        base = m.group(1)
+        exp  = m.group(2)
+        # Si la base es una expresión con paréntesis, ya viene limpia
+        if re.match(r'^[A-Za-z0-9_\\{}]+$', base):
+            return f'{base}^{{{exp}}}'
+        return f'({base})^{{{exp}}}'
+
+    # Manejo de potencias con paréntesis: (expr)**n
+    s = re.sub(r'\(([^()]+)\)\*\*([^\s\+\-\*\/\)]+)', repl_pow, s)
+    # Manejo de potencias simples: x**n  o  \fn**n
+    s = re.sub(r'([A-Za-z0-9_\\{}]+)\*\*([A-Za-z0-9_{}\\]+)', repl_pow, s)
+
+    # Multiplicación implícita: 3*x → 3x,  pero conservar espacios
+    s = re.sub(r'(\d)\*([A-Za-z\\])', r'\1\2', s)
+    s = re.sub(r'([A-Za-z}])\*([A-Za-z0-9\\])', r'\1 \\cdot \2', s)
+    # Eliminar * restantes
+    s = s.replace('*', ' \\cdot ')
+
+    # Fracciones simples n/m entre enteros o pi
+    s = re.sub(r'(-?[0-9]+)\s*/\s*([0-9]+)', r'\\frac{\1}{\2}', s)
+    s = re.sub(r'(\\pi)\s*/\s*([0-9]+)', r'\\frac{\1}{\2}', s)
+
+    return s
+
+
 class CalculadoraApp:
     def __init__(self, root: tk.Tk):
         self.root = root
@@ -370,12 +416,12 @@ class CalculadoraApp:
                                      command=self._copiar_resultado)
         self.btn_copiar.pack(side="right")
  
-        # Configurar un canvas gráfico dedicado a mostrar la fórmula LaTeX perfectamente estructurada
-        self.fig_res = Figure(figsize=(5.5, 1.4), dpi=95, facecolor="#F1EFE8")
+        # Canvas gráfico dedicado – altura mayor para fórmulas grandes
+        self.fig_res = Figure(figsize=(5.5, 2.2), dpi=100, facecolor="#F1EFE8")
         self.ax_res  = self.fig_res.add_subplot(111)
-        self.ax_res.axis('off')  # Ocultar ejes coordenados
-        self.ax_res.set_position([0.02, 0.02, 0.96, 0.96])
-        
+        self.ax_res.axis('off')
+        self.ax_res.set_position([0.03, 0.03, 0.94, 0.94])
+
         self.canvas_res = FigureCanvasTkAgg(self.fig_res, master=self.card_resultado)
         self.widget_res = self.canvas_res.get_tk_widget()
         self.widget_res.pack(fill="x")
@@ -494,65 +540,80 @@ class CalculadoraApp:
  
         if resultado.get("exito"):
             lineas_clipboard = []
-            
-            # Formatear la salida utilizando la sintaxis de mathtext de Matplotlib
+            fx      = py_a_latex(expresion)
+            res_raw = resultado.get("texto", "").replace("\n", " ")
+            res_lat = py_a_latex(res_raw)
+
+            # ── Línea superior: la pregunta ──────────────────────────────────
             if op == "atan":
+                linea_q = rf"$\arctan\!\left({fx}\right) =$"
                 lineas_clipboard.append(f"atan({expresion}) =")
-                latex_str = f"$\\mathrm{{atan}}({expresion}) =$"
-                
+
             elif op == "resolver_atan":
                 valor_c = self.valor_atan.get().strip()
+                val_lat = py_a_latex(valor_c)
+                linea_q = rf"$\arctan\!\left({fx}\right) = {val_lat}$"
                 lineas_clipboard.append(f"atan({expresion}) = {valor_c}")
-                latex_str = f"$\\mathrm{{atan}}({expresion}) = {valor_c}$"
- 
+
             elif op == "indefinida":
+                linea_q = rf"$\int {fx}\, dx =$"
                 lineas_clipboard.append(f"∫ {expresion} dx =")
-                latex_str = f"$\\int {expresion} \\, dx =$"
- 
+
             elif op == "definida":
-                a = self.limite_inf.get().strip()
-                b = self.limite_sup.get().strip()
+                a  = self.limite_inf.get().strip()
+                b  = self.limite_sup.get().strip()
+                al = py_a_latex(a)
+                bl = py_a_latex(b)
+                linea_q = rf"$\int_{{{al}}}^{{{bl}}} {fx}\, dx =$"
                 lineas_clipboard.append(f"∫ {expresion} dx  de {a} a {b} =")
-                latex_str = f"$\\int_{{{a}}}^{{{b}}} {expresion} \\, dx =$"
- 
+
             elif op == "taylor":
-                a = self.taylor_punto.get().strip()
-                n = self.taylor_orden.get().strip()
+                a  = self.taylor_punto.get().strip()
+                n  = self.taylor_orden.get().strip()
+                al = py_a_latex(a)
+                linea_q = rf"$\mathrm{{Taylor}}\!\left({fx},\; a={al},\; n={n}\right) =$"
                 lineas_clipboard.append(f"Taylor({expresion}, a={a}, orden={n}) =")
-                latex_str = f"$\\mathrm{{Taylor}}({expresion}, a={a}, n={n}) =$"
- 
+
             elif op == "maclaurin":
                 n = self.maclaurin_orden.get().strip()
+                linea_q = rf"$\mathrm{{Maclaurin}}\!\left({fx},\; n={n}\right) =$"
                 lineas_clipboard.append(f"Maclaurin({expresion}, orden={n}) =")
-                latex_str = f"$\\mathrm{{Maclaurin}}({expresion}, n={n}) =$"
- 
-            # Añadir la respuesta en una sola línea quitando saltos de línea rotos
-            respuesta_limpia = resultado.get("texto", "").replace("\n", " ")
-            lineas_clipboard.append(respuesta_limpia)
-            
+
+            else:
+                linea_q = rf"${fx} =$"
+
+            # ── Línea inferior: la respuesta ─────────────────────────────────
             num = resultado.get("valor_numerico")
             if num is not None:
-                lineas_clipboard.append(f"Valor numérico ≈ {num}")
-                # Si es una integral definida, creamos un despliegue elegante de dos renglones gráficos
-                texto_mostrar = f"{latex_str}\n$\\approx {num:.6f}$"
+                linea_r = rf"$\approx {num:.6f}$"
+                lineas_clipboard.append(f"≈ {num:.6f}")
             else:
-                texto_mostrar = f"{latex_str}\n${respuesta_limpia[:60]}...$" if len(respuesta_limpia) > 60 else f"{latex_str}\n${respuesta_limpia}$"
- 
-            # Renderizar el texto matemático con tipografía serif profesional
-            self.ax_res.text(0.02, 0.5, texto_mostrar, 
-                             fontsize=11, family='serif', color=COLOR_SUCCESS,
-                             ha='left', va='center', wrap=True)
- 
+                if len(res_lat) > 80:
+                    res_lat = res_lat[:77] + r"\ldots"
+                linea_r = rf"${res_lat}$"
+                lineas_clipboard.append(res_raw)
+
+            # ── Renderizar con fuente grande, centrado ───────────────────────
+            self.ax_res.text(0.5, 0.72, linea_q,
+                             fontsize=13, family='serif',
+                             color=COLOR_PRIMARY2,
+                             ha='center', va='center')
+            self.ax_res.text(0.5, 0.28, linea_r,
+                             fontsize=15, family='serif',
+                             color=COLOR_SUCCESS,
+                             ha='center', va='center',
+                             fontweight='bold')
+
             self._ultimo_texto = "\n".join(lineas_clipboard)
             self._agregar_historial(op, expresion, resultado)
-            
-            # 🔥 AUTO-GRAFICAR: Si Matplotlib está activo, actualiza el lienzo inferior automáticamente
+
+            # 🔥 AUTO-GRAFICAR
             if MATPLOTLIB_DISPONIBLE:
                 self._graficar()
         else:
             texto_err = "⚠  " + resultado.get("error", "Error desconocido")
             self._ultimo_texto = texto_err
-            self.ax_res.text(0.5, 0.5, texto_err, 
+            self.ax_res.text(0.5, 0.5, texto_err,
                              fontsize=10, family='sans-serif', color=COLOR_ERROR,
                              ha='center', va='center')
  
